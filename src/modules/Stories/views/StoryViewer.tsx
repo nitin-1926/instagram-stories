@@ -32,11 +32,10 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete }: Stor
 		if (currentIndex < stories.length - 1) {
 			setDirection(1);
 			setCurrentIndex(prev => prev + 1);
-			resetProgress();
 		} else {
 			onNavigateStories('next');
 		}
-	}, [currentIndex, stories, onStoryComplete, onNavigateStories, resetProgress]);
+	}, [currentIndex, stories, onStoryComplete, onNavigateStories]);
 
 	const updateProgress = useCallback(() => {
 		if (isPaused) return;
