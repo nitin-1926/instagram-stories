@@ -1,5 +1,5 @@
 import { IconAntennaBars5, IconBattery4, IconWifi } from '@tabler/icons-react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useState } from 'react';
 import styled from 'styled-components';
 import { users } from './data/data';
@@ -59,16 +59,22 @@ const Stories = () => {
 					</StoriesRow>
 				</StoriesContainer>
 
-				<AnimatePresence mode="wait">
+				<AnimatePresence initial={false}>
 					{selectedUserIndex !== null && (
-						<StoryViewer
-							key={`${users[selectedUserIndex].id}`}
-							user={users[selectedUserIndex]}
-							onClose={handleCloseStory}
-							onNavigateStories={handleNavigateStories}
-							onStoryComplete={markStoryAsViewed}
-							viewedStories={viewedStories}
-						/>
+						<StoryViewerContainer
+							key="story-viewer"
+							initial={{ opacity: 1 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 1 }}
+						>
+							<StoryViewer
+								key={`user-${users[selectedUserIndex].id}`}
+								user={users[selectedUserIndex]}
+								onClose={handleCloseStory}
+								onNavigateStories={handleNavigateStories}
+								onStoryComplete={markStoryAsViewed}
+							/>
+						</StoryViewerContainer>
 					)}
 				</AnimatePresence>
 			</PhoneFrame>
@@ -77,6 +83,16 @@ const Stories = () => {
 };
 
 export { Stories };
+
+const StoryViewerContainer = styled(motion.div)`
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 50;
+	background-color: black;
+`;
 
 const Container = styled.div`
 	min-height: 100vh;

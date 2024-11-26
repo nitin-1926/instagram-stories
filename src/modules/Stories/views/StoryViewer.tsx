@@ -9,10 +9,9 @@ interface StoryViewerProps {
 	onClose: () => void;
 	onNavigateStories: (direction: 'next' | 'previous') => void;
 	onStoryComplete: (storyId: string) => void;
-	viewedStories: Set<string>;
 }
 
-const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete, viewedStories }: StoryViewerProps) => {
+const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete }: StoryViewerProps) => {
 	const stories = user.stories;
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [progress, setProgress] = useState(0);
@@ -104,6 +103,7 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete, viewed
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
+			transition={{ duration: 0.3 }}
 			onTouchStart={handleTouchStart}
 			onTouchEnd={handleTouchEnd}
 			onMouseDown={handleTouchStart}
@@ -117,11 +117,7 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete, viewed
 								initial={{ width: '0%' }}
 								animate={{
 									width:
-										index === currentIndex
-											? `${progress}%`
-											: index < currentIndex || viewedStories.has(story.id)
-												? '100%'
-												: '0%',
+										index === currentIndex ? `${progress}%` : index < currentIndex ? '100%' : '0%',
 								}}
 								transition={{ duration: 0.1, ease: 'linear' }}
 							/>
@@ -147,10 +143,13 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete, viewed
 				<AnimatePresence mode="wait" initial={false}>
 					<StoryImage
 						key={currentStory.id}
-						initial={{ opacity: 0, x: direction * 50 }}
-						animate={{ opacity: 1, x: 0 }}
-						exit={{ opacity: 0, x: direction * -50 }}
-						transition={{ duration: 0.3 }}
+						initial={{ opacity: 0, scale: 1.05, x: direction * 20 }}
+						animate={{ opacity: 1, scale: 1, x: 0 }}
+						exit={{ opacity: 0, scale: 0.95, x: direction * -20 }}
+						transition={{
+							duration: 0.3,
+							ease: 'easeInOut',
+						}}
 						src={currentStory.imageUrl}
 						alt=""
 						loading="lazy"
@@ -167,17 +166,15 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete, viewed
 };
 
 const ViewerContainer = styled(motion.div)`
-	position: fixed;
-	inset: 0;
-	background-color: black;
-	z-index: 50;
-	touch-action: none;
-
-	@media (min-width: 768px) {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 51;
 `;
 
 const StoryContainer = styled.div`
