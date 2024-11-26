@@ -1,10 +1,7 @@
-function App() {
+import { Stories } from './modules/Stories/Stories';
 
-  return (
-    <>
-      Hello World
-    </>
-  )
-}
+const App = () => {
+	return <Stories />;
+};
 
-export default App
+export default App;
