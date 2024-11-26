@@ -62,6 +62,10 @@ const Stories = () => {
 					</StatusIcons>
 				</PhoneHeader>
 
+				<LogoHeader>
+					<LogoText>Instagram</LogoText>
+				</LogoHeader>
+
 				<StoriesContainer
 					onTouchStart={handleTouchStart}
 					onTouchMove={handleTouchMove}
@@ -141,6 +145,21 @@ const PhoneHeader = styled.div`
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+`;
+
+const LogoHeader = styled.div`
+	background-color: white;
+	padding: 0.75rem 1.5rem;
+	display: flex;
+	align-items: flex-start;
+	justify-content: flex-start;
+`;
+
+const LogoText = styled.div`
+	font-size: 1.625rem;
+	font-weight: 500;
+	-webkit-background-clip: text;
+	background-clip: text;
 `;
 
 const Time = styled.div`
