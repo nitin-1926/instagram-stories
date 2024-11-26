@@ -2,6 +2,8 @@ import { IconX } from '@tabler/icons-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useImagePreloader } from '../hooks/useImagePreloader';
 import { User } from '../types/story';
 
 interface StoryViewerProps {
@@ -53,17 +55,6 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete }: Stor
 		}
 	}, [isPaused, handleStoryComplete]);
 
-	useEffect(() => {
-		resetProgress();
-		animationFrameRef.current = requestAnimationFrame(updateProgress);
-
-		return () => {
-			if (animationFrameRef.current) {
-				cancelAnimationFrame(animationFrameRef.current);
-			}
-		};
-	}, [currentIndex, updateProgress, resetProgress]);
-
 	const handlePrevious = () => {
 		if (currentIndex > 0) {
 			setDirection(-1);
@@ -91,11 +82,27 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete }: Stor
 		animationFrameRef.current = requestAnimationFrame(updateProgress);
 	};
 
+	const currentStory = stories[currentIndex];
+	const nextStory = stories[currentIndex + 1];
+	const isCurrentImageLoaded = useImagePreloader(currentStory.imageUrl);
+	const isNextImageLoaded = useImagePreloader(nextStory?.imageUrl || '');
+
+	useEffect(() => {
+		if (!isCurrentImageLoaded) return;
+
+		resetProgress();
+		animationFrameRef.current = requestAnimationFrame(updateProgress);
+
+		return () => {
+			if (animationFrameRef.current) {
+				cancelAnimationFrame(animationFrameRef.current);
+			}
+		};
+	}, [currentIndex, updateProgress, resetProgress, isCurrentImageLoaded]);
+
 	if (!stories.length) {
 		return null;
 	}
-
-	const currentStory = stories[currentIndex];
 
 	return (
 		<ViewerContainer
@@ -139,20 +146,23 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete }: Stor
 					</CloseButton>
 				</Header>
 
+				{!isCurrentImageLoaded && <LoadingSpinner />}
+
 				<AnimatePresence mode="wait" initial={false}>
-					<StoryImage
-						key={currentStory.id}
-						initial={{ opacity: 0, scale: 1.05, x: direction * 20 }}
-						animate={{ opacity: 1, scale: 1, x: 0 }}
-						exit={{ opacity: 0, scale: 0.95, x: direction * -20 }}
-						transition={{
-							duration: 0.3,
-							ease: 'easeInOut',
-						}}
-						src={currentStory.imageUrl}
-						alt=""
-						loading="lazy"
-					/>
+					{isCurrentImageLoaded && (
+						<StoryImage
+							key={currentStory.id}
+							initial={{ opacity: 0, scale: 1.05, x: direction * 20 }}
+							animate={{ opacity: 1, scale: 1, x: 0 }}
+							exit={{ opacity: 0, scale: 0.95, x: direction * -20 }}
+							transition={{
+								duration: 0.3,
+								ease: 'easeInOut',
+							}}
+							src={currentStory.imageUrl}
+							alt=""
+						/>
+					)}
 				</AnimatePresence>
 
 				<TouchArea>
