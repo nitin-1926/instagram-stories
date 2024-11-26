@@ -9,6 +9,7 @@ import { StoryViewer } from './views/StoryViewer';
 const Stories = () => {
 	const [selectedUserIndex, setSelectedUserIndex] = useState<number | null>(null);
 	const [viewedStories, setViewedStories] = useState<Set<string>>(new Set());
+	const [touchStart, setTouchStart] = useState<number | null>(null);
 
 	const handleStoryClick = (userIndex: number) => {
 		setSelectedUserIndex(userIndex);
@@ -34,6 +35,21 @@ const Stories = () => {
 		});
 	}, []);
 
+	const handleTouchStart = (e: React.TouchEvent) => {
+		setTouchStart(e.touches[0].clientX);
+	};
+
+	const handleTouchMove = (e: React.TouchEvent) => {
+		if (!touchStart) return;
+
+		const container = e.currentTarget;
+		const touch = e.touches[0];
+		const diff = touchStart - touch.clientX;
+
+		container.scrollLeft += diff;
+		setTouchStart(touch.clientX);
+	};
+
 	return (
 		<Container>
 			<PhoneFrame>
@@ -46,7 +62,11 @@ const Stories = () => {
 					</StatusIcons>
 				</PhoneHeader>
 
-				<StoriesContainer>
+				<StoriesContainer
+					onTouchStart={handleTouchStart}
+					onTouchMove={handleTouchMove}
+					onTouchEnd={() => setTouchStart(null)}
+				>
 					<StoriesRow>
 						{users.map((user, index) => (
 							<StoryCircle
@@ -136,10 +156,22 @@ const StoriesContainer = styled.div`
 	overflow-x: auto;
 	padding: 0.5rem;
 	border-bottom: 1px solid rgb(243 244 246);
+	width: 100%;
+	-webkit-overflow-scrolling: touch;
+
+	/* Hide scrollbar for Chrome, Safari and Opera */
+	&::-webkit-scrollbar {
+		display: none;
+	}
+
+	/* Hide scrollbar for IE, Edge and Firefox */
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
 `;
 
 const StoriesRow = styled.div`
 	display: flex;
 	gap: 1rem;
 	padding: 0 0.5rem;
+	width: max-content;
 `;
