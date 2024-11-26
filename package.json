@@ -12,6 +12,7 @@
 		"format:check": "prettier --check ."
 	},
 	"dependencies": {
+		"@tabler/icons-react": "^3.22.0",
 		"@types/styled-components": "^5.1.34",
 		"framer-motion": "^11.11.17",
 		"react": "^18.3.1",
