@@ -1,18 +1,38 @@
 import { IconAntennaBars5, IconBattery4, IconWifi } from '@tabler/icons-react';
-import { useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { useCallback, useState } from 'react';
 import styled from 'styled-components';
 import { users } from './data/data';
-import type { User } from './types/story';
 import { StoryCircle } from './views/StoryCircle';
+import { StoryViewer } from './views/StoryViewer';
 
 const Stories = () => {
-	const [selectedUser, setSelectedUser] = useState<User | null>(null);
-	const [selectedStoryIndex, setSelectedStoryIndex] = useState<number>(0);
+	const [selectedUserIndex, setSelectedUserIndex] = useState<number | null>(null);
+	const [viewedStories, setViewedStories] = useState<Set<string>>(new Set());
 
-	const handleStoryClick = (user: User) => {
-		setSelectedUser(user);
-		setSelectedStoryIndex(0);
+	const handleStoryClick = (userIndex: number) => {
+		setSelectedUserIndex(userIndex);
 	};
+
+	const handleCloseStory = useCallback(() => {
+		setSelectedUserIndex(null);
+	}, []);
+
+	const markStoryAsViewed = useCallback((storyId: string) => {
+		setViewedStories(prev => new Set([...prev, storyId]));
+	}, []);
+
+	const handleNavigateStories = useCallback((direction: 'next' | 'previous') => {
+		setSelectedUserIndex(prev => {
+			if (prev === null) return null;
+
+			if (direction === 'next') {
+				return prev < users.length - 1 ? prev + 1 : null;
+			} else {
+				return prev > 0 ? prev - 1 : prev;
+			}
+		});
+	}, []);
 
 	return (
 		<Container>
@@ -28,17 +48,29 @@ const Stories = () => {
 
 				<StoriesContainer>
 					<StoriesRow>
-						{users.map(user => (
+						{users.map((user, index) => (
 							<StoryCircle
 								key={user.id}
 								user={user}
-								onClick={() => handleStoryClick(user)}
+								onClick={() => handleStoryClick(index)}
 								isViewed={user.stories.every(story => viewedStories.has(story.id))}
 							/>
 						))}
 					</StoriesRow>
 				</StoriesContainer>
 
+				<AnimatePresence mode="wait">
+					{selectedUserIndex !== null && (
+						<StoryViewer
+							key={`${users[selectedUserIndex].id}`}
+							user={users[selectedUserIndex]}
+							onClose={handleCloseStory}
+							onNavigateStories={handleNavigateStories}
+							onStoryComplete={markStoryAsViewed}
+							viewedStories={viewedStories}
+						/>
+					)}
+				</AnimatePresence>
 			</PhoneFrame>
 		</Container>
 	);
