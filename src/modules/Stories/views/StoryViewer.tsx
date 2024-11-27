@@ -34,8 +34,8 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 	const nextStory = stories[currentIndex + 1];
 
 	// Preload current and next images
-	const isCurrentImageLoaded = useImagePreloader(currentStory.imageUrl);
-	const isNextImageLoaded = useImagePreloader(nextStory?.imageUrl || '');
+	const { isLoaded, blur } = useImagePreloader(currentStory.imageUrl);
+	const nextImageState = useImagePreloader(nextStory?.imageUrl || '');
 
 	const resetProgress = useCallback(() => {
 		// Reset the progress bar and update the start time reference
@@ -94,7 +94,7 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 
 	// Effect for managing story progress animation
 	useEffect(() => {
-		if (!isCurrentImageLoaded) return;
+		if (!isLoaded) return;
 
 		// Reset the progress bar and start the progress animation
 		resetProgress();
@@ -106,7 +106,7 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 				cancelAnimationFrame(animationFrameRef.current);
 			}
 		};
-	}, [currentIndex, updateProgress, resetProgress, isCurrentImageLoaded]);
+	}, [currentIndex, updateProgress, resetProgress, isLoaded]);
 
 	// If there are no stories, return null
 	if (!stories.length) return null;
@@ -123,20 +123,21 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 
 				<StoryHeader user={user} timestamp={currentStory.timestamp} onClose={onClose} />
 
-				{!isCurrentImageLoaded && <LoadingSpinner />}
+				{!isLoaded && <LoadingSpinner />}
 
 				<AnimatePresence mode="wait" initial={false}>
-					{isCurrentImageLoaded && (
-						<StoryImage
-							key={currentStory.id}
-							initial={{ opacity: 0, scale: 1.05, x: direction * 20 }}
-							animate={{ opacity: 1, scale: 1, x: 0 }}
-							exit={{ opacity: 0, scale: 0.95, x: direction * -20 }}
-							transition={{ duration: 0.3, ease: 'easeInOut' }}
-							src={currentStory.imageUrl}
-							alt=""
-						/>
-					)}
+					<StoryImage
+						key={currentStory.id}
+						initial={{ opacity: 0, scale: 1.05, x: direction * 20 }}
+						animate={{ opacity: 1, scale: 1, x: 0 }}
+						exit={{ opacity: 0, scale: 0.95, x: direction * -20 }}
+						transition={{ duration: 0.3, ease: 'easeInOut' }}
+						src={currentStory.imageUrl}
+						$blur={blur}
+						alt=""
+						loading="eager"
+						decoding="async"
+					/>
 				</AnimatePresence>
 
 				<TouchArea>
@@ -173,10 +174,13 @@ const StoryContainer = styled.div`
 	}
 `;
 
-const StoryImage = styled(motion.img)`
+const StoryImage = styled(motion.img)<{ $blur: string }>`
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
+	transition: filter 0.3s ease-in-out;
+	filter: ${props => props.$blur};
+	will-change: filter;
 `;
 
 const TouchArea = styled.div`
