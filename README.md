@@ -1,6 +1,7 @@
 # Instagram Stories Clone
 
 A performant React implementation of Instagram Stories featuring smooth animations, touch interactions, and progressive image loading.
+Deployment Link: https://instagram-stories-one.vercel.app/
 
 ## 🚀 Quick Start
 
