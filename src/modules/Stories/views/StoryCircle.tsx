@@ -12,7 +12,7 @@ interface StoryCircleProps {
 const StoryCircle = React.memo(({ user, isViewed = false, onClick }: StoryCircleProps) => {
 	return (
 		<CircleContainer whileTap={{ scale: 0.8 }} onClick={onClick}>
-			<GradientRing isViewed={isViewed}>
+			<GradientRing data-testid="story-ring" isViewed={isViewed}>
 				<ImageContainer>
 					<StoryImage src={user.avatar} alt={user.username} />
 				</ImageContainer>

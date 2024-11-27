@@ -21,7 +21,7 @@ const StoryHeader = React.memo(({ user, timestamp, onClose }: StoryHeaderProps) 
 					<Timestamp>{timestamp}</Timestamp>
 				</UserTextInfo>
 			</UserInfo>
-			<CloseButton onClick={onClose}>
+			<CloseButton aria-label="Close story" onClick={onClose}>
 				<IconX />
 			</CloseButton>
 		</Header>

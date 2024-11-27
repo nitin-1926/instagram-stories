@@ -54,7 +54,11 @@ const Stories = () => {
 	}, []);
 
 	const markStoryAsViewed = useCallback((storyId: string) => {
-		setViewedStories(prev => new Set([...prev, storyId]));
+		setViewedStories(prev => {
+			const newSet = new Set(prev);
+			newSet.add(storyId);
+			return newSet;
+		});
 	}, []);
 
 	const handleNavigateStories = useCallback(
@@ -102,6 +106,7 @@ const Stories = () => {
 
 				{/* Horizontally scrollable stories container */}
 				<StoriesContainer
+					data-testid="stories-container"
 					onTouchStart={handleTouchStart}
 					onTouchMove={handleTouchMove}
 					onTouchEnd={() => setTouchStart(null)}

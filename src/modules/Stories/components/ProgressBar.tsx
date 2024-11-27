@@ -14,6 +14,7 @@ const ProgressBar = React.memo(({ stories, currentIndex, progress }: ProgressBar
 			{stories.map((story, index) => (
 				<Bar key={story.id}>
 					<Fill
+						data-testid="progress-bar"
 						initial={{ width: '0%' }}
 						animate={{
 							width: index === currentIndex ? `${progress}%` : index < currentIndex ? '100%' : '0%',

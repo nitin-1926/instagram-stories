@@ -35,7 +35,7 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 
 	// Preload current and next images
 	const { isLoaded, blur } = useImagePreloader(currentStory.imageUrl);
-	const nextImageState = useImagePreloader(nextStory?.imageUrl || '');
+	useImagePreloader(nextStory?.imageUrl || '');
 
 	const resetProgress = useCallback(() => {
 		// Reset the progress bar and update the start time reference
@@ -44,7 +44,7 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 	}, []);
 
 	const handleStoryComplete = useCallback(() => {
-		// Mark the current story as complete and navigate to the next story
+		// Mark the current story as complete
 		const currentStory = stories[currentIndex];
 		onStoryComplete(currentStory.id);
 
@@ -52,11 +52,12 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 		if (currentIndex < stories.length - 1) {
 			setDirection(1);
 			setCurrentIndex(prev => prev + 1);
+			resetProgress();
 		} else {
 			// If it's the last story, navigate to the next user's stories
 			onNavigateStories('next');
 		}
-	}, [currentIndex, stories, onStoryComplete, onNavigateStories]);
+	}, [currentIndex, stories, onStoryComplete, onNavigateStories, resetProgress]);
 
 	const updateProgress = useCallback(() => {
 		// Calculate the elapsed time and update the progress
@@ -117,6 +118,7 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
 			transition={{ duration: 0.3 }}
+			data-testid="story-viewer"
 		>
 			<StoryContainer>
 				<ProgressBar stories={stories} currentIndex={currentIndex} progress={progress} />
@@ -165,6 +167,7 @@ const ViewerContainer = styled(motion.div)`
 const StoryContainer = styled.div`
 	position: relative;
 	height: 100%;
+	width: 100%;
 
 	@media (min-width: 768px) {
 		height: 80vh;
@@ -189,6 +192,11 @@ const TouchArea = styled.div`
 	z-index: 10;
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
+
+	> div {
+		height: 100%;
+		width: 100%;
+	}
 
 	@media (min-width: 768px) {
 		display: none;
