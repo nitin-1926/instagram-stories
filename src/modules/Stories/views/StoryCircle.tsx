@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import React from 'react';
 import styled from 'styled-components';
 import type { User } from '../types/story';
 
@@ -8,7 +9,7 @@ interface StoryCircleProps {
 	onClick: () => void;
 }
 
-const StoryCircle = ({ user, isViewed = false, onClick }: StoryCircleProps) => {
+const StoryCircle = React.memo(({ user, isViewed = false, onClick }: StoryCircleProps) => {
 	return (
 		<CircleContainer whileTap={{ scale: 0.8 }} onClick={onClick}>
 			<GradientRing isViewed={isViewed}>
@@ -19,7 +20,9 @@ const StoryCircle = ({ user, isViewed = false, onClick }: StoryCircleProps) => {
 			<Username>{user.username}</Username>
 		</CircleContainer>
 	);
-};
+});
+
+export { StoryCircle };
 
 const CircleContainer = styled(motion.div)`
 	display: flex;
@@ -64,5 +67,3 @@ const Username = styled.span`
 	text-overflow: ellipsis;
 	white-space: nowrap;
 `;
-
-export { StoryCircle };

@@ -1,8 +1,9 @@
-import { IconX } from '@tabler/icons-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { ProgressBar } from '../components/ProgressBar';
+import { StoryHeader } from '../components/StoryHeader';
 import { useImagePreloader } from '../hooks/useImagePreloader';
 import { User } from '../types/story';
 
@@ -13,86 +14,93 @@ interface StoryViewerProps {
 	onStoryComplete: (storyId: string) => void;
 }
 
-const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete }: StoryViewerProps) => {
-	const stories = user.stories;
+/**
+ * StoryViewer Component
+ * Displays individual stories with animations, progress tracking, and navigation
+ * Handles touch interactions, image preloading, and automatic story progression
+ * Memoized to prevent unnecessary re-renders
+ */
+const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }: StoryViewerProps) => {
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [progress, setProgress] = useState(0);
-	const [isPaused, setIsPaused] = useState(false);
 	const [direction, setDirection] = useState(0);
+
+	// Refs for animation timing
 	const startTimeRef = useRef<number>(Date.now());
 	const animationFrameRef = useRef<number>();
 
+	const stories = user.stories;
+	const currentStory = stories[currentIndex];
+	const nextStory = stories[currentIndex + 1];
+
+	// Preload current and next images
+	const isCurrentImageLoaded = useImagePreloader(currentStory.imageUrl);
+	const isNextImageLoaded = useImagePreloader(nextStory?.imageUrl || '');
+
 	const resetProgress = useCallback(() => {
+		// Reset the progress bar and update the start time reference
 		setProgress(0);
 		startTimeRef.current = Date.now();
 	}, []);
 
 	const handleStoryComplete = useCallback(() => {
+		// Mark the current story as complete and navigate to the next story
 		const currentStory = stories[currentIndex];
 		onStoryComplete(currentStory.id);
 
+		// If there are more stories from the current user, navigate to the next story
 		if (currentIndex < stories.length - 1) {
 			setDirection(1);
 			setCurrentIndex(prev => prev + 1);
 		} else {
+			// If it's the last story, navigate to the next user's stories
 			onNavigateStories('next');
 		}
 	}, [currentIndex, stories, onStoryComplete, onNavigateStories]);
 
 	const updateProgress = useCallback(() => {
-		if (isPaused) return;
-
+		// Calculate the elapsed time and update the progress
 		const currentTime = Date.now();
 		const elapsed = currentTime - startTimeRef.current;
 		const newProgress = Math.min(100, (elapsed / 5000) * 100);
 
 		setProgress(newProgress);
 
+		// If progress reaches 100%, complete the story
 		if (newProgress >= 100) {
 			handleStoryComplete();
 		} else {
+			// Continue the progress animation
 			animationFrameRef.current = requestAnimationFrame(updateProgress);
 		}
-	}, [isPaused, handleStoryComplete]);
+	}, [handleStoryComplete]);
 
-	const handlePrevious = () => {
+	const handlePrevious = useCallback(() => {
+		// If there are more stories from the current user, navigate to the previous story
 		if (currentIndex > 0) {
 			setDirection(-1);
 			setCurrentIndex(prev => prev - 1);
 			resetProgress();
 		} else {
+			// If it's the first story, navigate to the previous user's stories
 			onNavigateStories('previous');
 		}
-	};
+	}, [currentIndex, onNavigateStories, resetProgress]);
 
-	const handleNext = () => {
+	const handleNext = useCallback(() => {
+		// Complete the current story and navigate to the next story
 		handleStoryComplete();
-	};
+	}, [handleStoryComplete]);
 
-	const handleTouchStart = () => {
-		setIsPaused(true);
-		if (animationFrameRef.current) {
-			cancelAnimationFrame(animationFrameRef.current);
-		}
-	};
-
-	const handleTouchEnd = () => {
-		setIsPaused(false);
-		startTimeRef.current = Date.now() - (progress / 100) * 5000;
-		animationFrameRef.current = requestAnimationFrame(updateProgress);
-	};
-
-	const currentStory = stories[currentIndex];
-	const nextStory = stories[currentIndex + 1];
-	const isCurrentImageLoaded = useImagePreloader(currentStory.imageUrl);
-	const isNextImageLoaded = useImagePreloader(nextStory?.imageUrl || '');
-
+	// Effect for managing story progress animation
 	useEffect(() => {
 		if (!isCurrentImageLoaded) return;
 
+		// Reset the progress bar and start the progress animation
 		resetProgress();
 		animationFrameRef.current = requestAnimationFrame(updateProgress);
 
+		// Cleanup function to cancel the animation frame when the component unmounts
 		return () => {
 			if (animationFrameRef.current) {
 				cancelAnimationFrame(animationFrameRef.current);
@@ -100,9 +108,8 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete }: Stor
 		};
 	}, [currentIndex, updateProgress, resetProgress, isCurrentImageLoaded]);
 
-	if (!stories.length) {
-		return null;
-	}
+	// If there are no stories, return null
+	if (!stories.length) return null;
 
 	return (
 		<ViewerContainer
@@ -110,41 +117,11 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete }: Stor
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
 			transition={{ duration: 0.3 }}
-			onTouchStart={handleTouchStart}
-			onTouchEnd={handleTouchEnd}
-			onMouseDown={handleTouchStart}
-			onMouseUp={handleTouchEnd}
 		>
 			<StoryContainer>
-				<ProgressBarContainer>
-					{stories.map((story, index) => (
-						<ProgressBar key={story.id}>
-							<ProgressFill
-								initial={{ width: '0%' }}
-								animate={{
-									width:
-										index === currentIndex ? `${progress}%` : index < currentIndex ? '100%' : '0%',
-								}}
-								transition={{ duration: 0.1, ease: 'linear' }}
-							/>
-						</ProgressBar>
-					))}
-				</ProgressBarContainer>
+				<ProgressBar stories={stories} currentIndex={currentIndex} progress={progress} />
 
-				<Header>
-					<UserInfo>
-						<AvatarContainer>
-							<Avatar src={user.avatar} alt={user.username} loading="eager" />
-						</AvatarContainer>
-						<UserTextInfo>
-							<Username>{user.username}</Username>
-							<Timestamp>{currentStory.timestamp}</Timestamp>
-						</UserTextInfo>
-					</UserInfo>
-					<CloseButton onClick={onClose}>
-						<IconX />
-					</CloseButton>
-				</Header>
+				<StoryHeader user={user} timestamp={currentStory.timestamp} onClose={onClose} />
 
 				{!isCurrentImageLoaded && <LoadingSpinner />}
 
@@ -155,10 +132,7 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete }: Stor
 							initial={{ opacity: 0, scale: 1.05, x: direction * 20 }}
 							animate={{ opacity: 1, scale: 1, x: 0 }}
 							exit={{ opacity: 0, scale: 0.95, x: direction * -20 }}
-							transition={{
-								duration: 0.3,
-								ease: 'easeInOut',
-							}}
+							transition={{ duration: 0.3, ease: 'easeInOut' }}
 							src={currentStory.imageUrl}
 							alt=""
 						/>
@@ -172,8 +146,9 @@ const StoryViewer = ({ user, onClose, onNavigateStories, onStoryComplete }: Stor
 			</StoryContainer>
 		</ViewerContainer>
 	);
-};
+});
 
+// Styled components for layout and styling
 const ViewerContainer = styled(motion.div)`
 	position: absolute;
 	top: 0;
@@ -198,78 +173,6 @@ const StoryContainer = styled.div`
 	}
 `;
 
-const ProgressBarContainer = styled.div`
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	z-index: 20;
-	display: flex;
-	gap: 0.25rem;
-	padding: 0.5rem;
-`;
-
-const ProgressBar = styled.div`
-	height: 0.125rem;
-	flex: 1;
-	background-color: rgba(75, 85, 99, 0.3);
-	overflow: hidden;
-	border-radius: 9999px;
-`;
-
-const ProgressFill = styled(motion.div)`
-	height: 100%;
-	background-color: white;
-	border-radius: 9999px;
-`;
-
-const Header = styled.div`
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	z-index: 20;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 1rem;
-	padding-top: 2rem;
-	background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.3), transparent);
-`;
-
-const UserInfo = styled.div`
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-`;
-
-const AvatarContainer = styled.div`
-	position: relative;
-`;
-
-const Avatar = styled.img`
-	width: 2rem;
-	height: 2rem;
-	border-radius: 9999px;
-	border: 1px solid rgba(255, 255, 255, 0.2);
-`;
-
-const UserTextInfo = styled.div`
-	display: flex;
-	flex-direction: column;
-`;
-
-const Username = styled.span`
-	color: white;
-	font-weight: 600;
-	font-size: 0.875rem;
-`;
-
-const Timestamp = styled.span`
-	color: rgb(209 213 219);
-	font-size: 0.75rem;
-`;
-
 const StoryImage = styled(motion.img)`
 	width: 100%;
 	height: 100%;
@@ -285,21 +188,6 @@ const TouchArea = styled.div`
 
 	@media (min-width: 768px) {
 		display: none;
-	}
-`;
-
-const CloseButton = styled.button`
-	background: none;
-	border: none;
-	padding: 8px;
-	cursor: pointer;
-	color: white;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-
-	&:hover {
-		opacity: 0.8;
 	}
 `;
 

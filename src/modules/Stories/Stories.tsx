@@ -1,19 +1,53 @@
 import { IconAntennaBars5, IconBattery4, IconWifi } from '@tabler/icons-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { users } from './data/data';
 import { StoryCircle } from './views/StoryCircle';
 import { StoryViewer } from './views/StoryViewer';
 
+/**
+ * PhoneHeader Component
+ * Displays the phone status bar with time and system icons
+ * Memoized to prevent unnecessary re-renders since its content only depends on time
+ */
+const PhoneHeader = React.memo(() => (
+	<HeaderContainer>
+		<Time>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Time>
+		<StatusIcons>
+			<IconAntennaBars5 />
+			<IconWifi />
+			<IconBattery4 />
+		</StatusIcons>
+	</HeaderContainer>
+));
+
+/**
+ * LogoHeader Component
+ * Displays the Instagram logo text
+ * Memoized since it's a static component that never changes
+ */
+const LogoHeader = React.memo(() => (
+	<HeaderContainer>
+		<LogoText>Instagram</LogoText>
+	</HeaderContainer>
+));
+
+/**
+ * Stories Component
+ * Main component that manages the Instagram-like stories feature
+ * Handles story navigation, viewing states, and touch interactions
+ */
 const Stories = () => {
 	const [selectedUserIndex, setSelectedUserIndex] = useState<number | null>(null);
 	const [viewedStories, setViewedStories] = useState<Set<string>>(new Set());
 	const [touchStart, setTouchStart] = useState<number | null>(null);
 
-	const handleStoryClick = (userIndex: number) => {
+	const memoizedUsers = useMemo(() => users, []);
+
+	const handleStoryClick = useCallback((userIndex: number) => {
 		setSelectedUserIndex(userIndex);
-	};
+	}, []);
 
 	const handleCloseStory = useCallback(() => {
 		setSelectedUserIndex(null);
@@ -23,56 +57,57 @@ const Stories = () => {
 		setViewedStories(prev => new Set([...prev, storyId]));
 	}, []);
 
-	const handleNavigateStories = useCallback((direction: 'next' | 'previous') => {
-		setSelectedUserIndex(prev => {
-			if (prev === null) return null;
+	const handleNavigateStories = useCallback(
+		(direction: 'next' | 'previous') => {
+			setSelectedUserIndex(prev => {
+				if (prev === null) return null;
 
-			if (direction === 'next') {
-				return prev < users.length - 1 ? prev + 1 : null;
-			} else {
-				return prev > 0 ? prev - 1 : prev;
-			}
-		});
+				if (direction === 'next') {
+					// Move to next user or close viewer if at the end
+					return prev < memoizedUsers.length - 1 ? prev + 1 : null;
+				} else {
+					// Move to previous user or stay at current if at the beginning
+					return prev > 0 ? prev - 1 : prev;
+				}
+			});
+		},
+		[memoizedUsers],
+	);
+
+	const handleTouchStart = useCallback((e: React.TouchEvent) => {
+		setTouchStart(e.touches[0].clientX);
 	}, []);
 
-	const handleTouchStart = (e: React.TouchEvent) => {
-		setTouchStart(e.touches[0].clientX);
-	};
+	const handleTouchMove = useCallback(
+		(e: React.TouchEvent) => {
+			if (!touchStart) return;
 
-	const handleTouchMove = (e: React.TouchEvent) => {
-		if (!touchStart) return;
+			const container = e.currentTarget;
+			const touch = e.touches[0];
+			const diff = touchStart - touch.clientX;
 
-		const container = e.currentTarget;
-		const touch = e.touches[0];
-		const diff = touchStart - touch.clientX;
-
-		container.scrollLeft += diff;
-		setTouchStart(touch.clientX);
-	};
+			// Update scroll position based on touch movement
+			container.scrollLeft += diff;
+			setTouchStart(touch.clientX);
+		},
+		[touchStart],
+	);
 
 	return (
 		<Container>
 			<PhoneFrame>
-				<PhoneHeader>
-					<Time>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Time>
-					<StatusIcons>
-						<IconAntennaBars5 />
-						<IconWifi />
-						<IconBattery4 />
-					</StatusIcons>
-				</PhoneHeader>
+				{/* Phone status bar */}
+				<PhoneHeader />
+				<LogoHeader />
 
-				<LogoHeader>
-					<LogoText>Instagram</LogoText>
-				</LogoHeader>
-
+				{/* Horizontally scrollable stories container */}
 				<StoriesContainer
 					onTouchStart={handleTouchStart}
 					onTouchMove={handleTouchMove}
 					onTouchEnd={() => setTouchStart(null)}
 				>
 					<StoriesRow>
-						{users.map((user, index) => (
+						{memoizedUsers.map((user, index) => (
 							<StoryCircle
 								key={user.id}
 								user={user}
@@ -83,6 +118,7 @@ const Stories = () => {
 					</StoriesRow>
 				</StoriesContainer>
 
+				{/* Story viewer modal with animation */}
 				<AnimatePresence initial={false}>
 					{selectedUserIndex !== null && (
 						<StoryViewerContainer
@@ -92,8 +128,8 @@ const Stories = () => {
 							exit={{ opacity: 1 }}
 						>
 							<StoryViewer
-								key={`user-${users[selectedUserIndex].id}`}
-								user={users[selectedUserIndex]}
+								key={`user-${memoizedUsers[selectedUserIndex].id}`}
+								user={memoizedUsers[selectedUserIndex]}
 								onClose={handleCloseStory}
 								onNavigateStories={handleNavigateStories}
 								onStoryComplete={markStoryAsViewed}
@@ -108,6 +144,7 @@ const Stories = () => {
 
 export { Stories };
 
+// Styled components for layout and styling
 const StoryViewerContainer = styled(motion.div)`
 	position: fixed;
 	top: 0;
@@ -139,20 +176,12 @@ const PhoneFrame = styled.div`
 	border: 1px solid #d8d3d3;
 `;
 
-const PhoneHeader = styled.div`
+const HeaderContainer = styled.div`
 	background-color: white;
 	padding: 0.75rem 1.5rem;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-`;
-
-const LogoHeader = styled.div`
-	background-color: white;
-	padding: 0.75rem 1.5rem;
-	display: flex;
-	align-items: flex-start;
-	justify-content: flex-start;
 `;
 
 const LogoText = styled.div`
