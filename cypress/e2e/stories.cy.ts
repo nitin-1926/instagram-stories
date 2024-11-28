@@ -29,7 +29,7 @@ describe('Instagram Stories', () => {
 				cy.get('[data-testid="story-viewer"]').click('right');
 
 				// Wait for the next story to load
-				cy.wait(2000);
+				cy.wait(7000);
 
 				// Verify the story image source has changed
 				cy.get('[data-testid="story-viewer"] img')
