@@ -24,7 +24,6 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [progress, setProgress] = useState(0);
 	const [direction, setDirection] = useState(0);
-	const [isPaused, setIsPaused] = useState(false);
 
 	const startTimeRef = useRef<number>(Date.now());
 	const animationFrameRef = useRef<number>();
@@ -63,8 +62,6 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 	}, [currentIndex, stories, onStoryComplete, onNavigateStories, resetProgress]);
 
 	const updateProgress = useCallback(() => {
-		if (isPaused) return;
-
 		// Calculate the elapsed time and update the progress
 		const currentTime = Date.now();
 		const elapsed = currentTime - startTimeRef.current;
@@ -79,7 +76,7 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 			// Continue the progress animation
 			animationFrameRef.current = requestAnimationFrame(updateProgress);
 		}
-	}, [handleStoryComplete, isPaused]);
+	}, [handleStoryComplete]);
 
 	const handlePrevious = useCallback(() => {
 		// If there are more stories from the current user, navigate to the previous story
@@ -97,15 +94,6 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 		// Complete the current story and navigate to the next story
 		handleStoryComplete();
 	}, [handleStoryComplete]);
-
-	// Long press handlers
-	const handleTouchStart = useCallback(() => {
-		setIsPaused(true);
-	}, []);
-
-	const handleTouchEnd = useCallback(() => {
-		setIsPaused(false);
-	}, []);
 
 	// Effect for managing story progress animation
 	useEffect(() => {
@@ -161,19 +149,10 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 				</AnimatePresence>
 
 				<TouchArea>
-					<TouchSide onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={handlePrevious} />
-					<TouchSide onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={handleNext} />
+					<TouchSide onClick={handlePrevious} />
+					<TouchSide onClick={handleNext} />
 				</TouchArea>
 
-				{isPaused && (
-					<PauseIndicator
-						initial={{ opacity: 0, scale: 0.8 }}
-						animate={{ opacity: 1, scale: 1 }}
-						exit={{ opacity: 0, scale: 0.8 }}
-					>
-						Paused
-					</PauseIndicator>
-				)}
 			</StoryContainer>
 		</ViewerContainer>
 	);
@@ -226,19 +205,6 @@ const TouchSide = styled.div`
 	height: 100%;
 	width: 100%;
 	-webkit-tap-highlight-color: transparent;
-`;
-
-const PauseIndicator = styled(motion.div)`
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
-	background: rgba(0, 0, 0, 0.7);
-	color: white;
-	padding: 0.5rem 1rem;
-	border-radius: 0.5rem;
-	font-size: 0.875rem;
-	z-index: 20;
 `;
 
 export { StoryViewer };
