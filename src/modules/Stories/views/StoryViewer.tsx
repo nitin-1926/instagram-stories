@@ -24,18 +24,21 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [progress, setProgress] = useState(0);
 	const [direction, setDirection] = useState(0);
+	const [isPaused, setIsPaused] = useState(false);
 
-	// Refs for animation timing
 	const startTimeRef = useRef<number>(Date.now());
 	const animationFrameRef = useRef<number>();
+	const containerRef = useRef<HTMLDivElement>(null);
 
 	const stories = user.stories;
 	const currentStory = stories[currentIndex];
 	const nextStory = stories[currentIndex + 1];
+	const previousStory = stories[currentIndex - 1];
 
-	// Preload current and next images
-	const { isLoaded, blur } = useImagePreloader(currentStory.imageUrl);
+	// Preload current, next and previous images
+	const { isLoaded, blur, lowQualityUrl } = useImagePreloader(currentStory.imageUrl);
 	useImagePreloader(nextStory?.imageUrl || '');
+	useImagePreloader(previousStory?.imageUrl || '');
 
 	const resetProgress = useCallback(() => {
 		// Reset the progress bar and update the start time reference
@@ -60,6 +63,8 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 	}, [currentIndex, stories, onStoryComplete, onNavigateStories, resetProgress]);
 
 	const updateProgress = useCallback(() => {
+		if (isPaused) return;
+
 		// Calculate the elapsed time and update the progress
 		const currentTime = Date.now();
 		const elapsed = currentTime - startTimeRef.current;
@@ -74,7 +79,7 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 			// Continue the progress animation
 			animationFrameRef.current = requestAnimationFrame(updateProgress);
 		}
-	}, [handleStoryComplete]);
+	}, [handleStoryComplete, isPaused]);
 
 	const handlePrevious = useCallback(() => {
 		// If there are more stories from the current user, navigate to the previous story
@@ -92,6 +97,15 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 		// Complete the current story and navigate to the next story
 		handleStoryComplete();
 	}, [handleStoryComplete]);
+
+	// Long press handlers
+	const handleTouchStart = useCallback(() => {
+		setIsPaused(true);
+	}, []);
+
+	const handleTouchEnd = useCallback(() => {
+		setIsPaused(false);
+	}, []);
 
 	// Effect for managing story progress animation
 	useEffect(() => {
@@ -119,10 +133,10 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 			exit={{ opacity: 0 }}
 			transition={{ duration: 0.3 }}
 			data-testid="story-viewer"
+			ref={containerRef}
 		>
 			<StoryContainer>
 				<ProgressBar stories={stories} currentIndex={currentIndex} progress={progress} />
-
 				<StoryHeader user={user} timestamp={currentStory.timestamp} onClose={onClose} />
 
 				{!isLoaded && <LoadingSpinner />}
@@ -133,8 +147,12 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 						initial={{ opacity: 0, scale: 1.05, x: direction * 20 }}
 						animate={{ opacity: 1, scale: 1, x: 0 }}
 						exit={{ opacity: 0, scale: 0.95, x: direction * -20 }}
-						transition={{ duration: 0.3, ease: 'easeInOut' }}
-						src={currentStory.imageUrl}
+						transition={{
+							duration: 0.3,
+							ease: [0.645, 0.045, 0.355, 1],
+							opacity: { duration: 0.15 },
+						}}
+						src={lowQualityUrl || currentStory.imageUrl}
 						$blur={blur}
 						alt=""
 						loading="eager"
@@ -143,9 +161,19 @@ const StoryViewer = memo(({ user, onClose, onNavigateStories, onStoryComplete }:
 				</AnimatePresence>
 
 				<TouchArea>
-					<div onClick={handlePrevious} />
-					<div onClick={handleNext} />
+					<TouchSide onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={handlePrevious} />
+					<TouchSide onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={handleNext} />
 				</TouchArea>
+
+				{isPaused && (
+					<PauseIndicator
+						initial={{ opacity: 0, scale: 0.8 }}
+						animate={{ opacity: 1, scale: 1 }}
+						exit={{ opacity: 0, scale: 0.8 }}
+					>
+						Paused
+					</PauseIndicator>
+				)}
 			</StoryContainer>
 		</ViewerContainer>
 	);
@@ -168,12 +196,12 @@ const StoryContainer = styled.div`
 	position: relative;
 	height: 100%;
 	width: 100%;
+	overflow: hidden;
 
 	@media (min-width: 768px) {
 		height: 80vh;
 		width: 360px;
 		border-radius: 1.5rem;
-		overflow: hidden;
 	}
 `;
 
@@ -183,7 +211,7 @@ const StoryImage = styled(motion.img)<{ $blur: string }>`
 	object-fit: cover;
 	transition: filter 0.3s ease-in-out;
 	filter: ${props => props.$blur};
-	will-change: filter;
+	will-change: transform, opacity, filter;
 `;
 
 const TouchArea = styled.div`
@@ -192,15 +220,25 @@ const TouchArea = styled.div`
 	z-index: 10;
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
+`;
 
-	> div {
-		height: 100%;
-		width: 100%;
-	}
+const TouchSide = styled.div`
+	height: 100%;
+	width: 100%;
+	-webkit-tap-highlight-color: transparent;
+`;
 
-	@media (min-width: 768px) {
-		display: none;
-	}
+const PauseIndicator = styled(motion.div)`
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: rgba(0, 0, 0, 0.7);
+	color: white;
+	padding: 0.5rem 1rem;
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+	z-index: 20;
 `;
 
 export { StoryViewer };
